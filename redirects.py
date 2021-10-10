@@ -84,7 +84,7 @@ if new_urls_upload and old_urls_upload:
         with st.spinner('Wait, magic happens ...'):
             stqdm.pandas()
 
-            old_file['New Url'] = old_file['Url'].progress_map(lambda x: best_strings_similarity(x)[0])
+            old_file['New Url'] = old_file[select_old_column].progress_map(lambda x: best_strings_similarity(x)[0])
             old_file[['New Item', 'Similarity Score']] = pd.DataFrame(old_file['New Url'].tolist(), index=old_file.index)
             redirects_plan = old_file[[select_old_column, 'New Item', 'Similarity Score']]
 
