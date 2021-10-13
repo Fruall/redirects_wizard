@@ -10,7 +10,8 @@ st.set_page_config(layout="wide")
 from fuzzywuzzy import fuzz
 from fuzzywuzzy import process
 from stqdm import stqdm
-
+from sklearn.metrics.pairwise import cosine_similarity
+from sentence_transformers import SentenceTransformer, util
 
 def url_preprocessing(url):
     url.split("/")[-1]
@@ -34,6 +35,72 @@ def best_strings_similarity(x):
     else:
         return process.extract(x, choices, scorer=fuzz.token_sort_ratio)
 
+def alg_strings_similarity():
+    with st.spinner('Wait, magic happens ...'):
+        stqdm.pandas()
+
+        old_file['New Url'] = old_file[select_old_column].progress_map(lambda x: best_strings_similarity(x)[0])
+        old_file[['New Item', 'Similarity Score']] = pd.DataFrame(old_file['New Url'].tolist(), index=old_file.index)
+        redirects_plan = old_file[[select_old_column, 'New Item', 'Similarity Score']]
+
+        st.success('All items have been successfully matched!')
+
+        # by_simscore = redirects_plan.groupby("Similarity Score").count()
+        # st.bar_chart(by_simscore)
+
+        st.dataframe(redirects_plan.style.background_gradient(cmap='flare', subset=['Similarity Score']))
+
+    @st.cache
+    def convert_df(df):
+        # IMPORTANT: Cache the conversion to prevent computation on every rerun
+        return df.to_csv().encode('utf-8')
+
+    csv = convert_df(redirects_plan)
+
+    st.download_button(
+        label="Download data as CSV",
+        data=csv,
+        file_name='redirects_plan.csv',
+        mime='text/csv',
+    )
+
+
+def bert(x, model):
+    embeddings1 = model.encode(x, convert_to_tensor=True)
+    embeddings2 = model.encode(new_file['H1'], convert_to_tensor=True)
+
+    cosine_scores = util.pytorch_cos_sim(embeddings1, embeddings2)
+
+    d = dict(enumerate(cosine_scores.flatten(), 1))
+
+    #{el: 0 for el in new_file['Url']}
+    dictionary = dict(zip(new_file['Url'], d.values()))
+
+    dict2 = {k: v for k, v in sorted(dictionary.items(), key=lambda item: item[1], reverse=True)}
+    match_key = list(dict2.keys())[0]
+    # st.write(match_key)
+    return match_key
+
+def alg_semantic_best_match(x, model):
+    embeddings1 = model.encode(x, convert_to_tensor=True)
+    embeddings2 = model.encode(new_file['H1'], convert_to_tensor=True)
+
+    # Compute cosine-similarits
+    cosine_scores = util.pytorch_cos_sim(embeddings1, embeddings2)
+
+    d = dict(enumerate(cosine_scores.flatten(), 1))
+
+    {el: 0 for el in new_file['Url']}
+    dictionary = dict(zip(new_file['Url'], d.values()))
+
+    dict2 = {k: v for k, v in sorted(dictionary.items(), key=lambda item: item[1], reverse=True)}
+    match_key = list(dict2.keys())[0]
+    # match_value = list(dict2.values())[0]
+    # match2 = list(dict2.values())[0]
+
+    return match_key
+
+
 
 st.image("magicien.png", width=100)
 st.title("Redirects Wizard")
@@ -42,7 +109,7 @@ st.sidebar.header("Setup")
 
 algorithm_selectbox = st.sidebar.radio(
     "1. Select the matching algorithm",
-    ("Strings similarity", "BM25F (inactive)", "Semantic matching (inactive)")
+    ("Strings similarity", "Semantic matching", "BOW (inactive)")
 )
 
 old_urls_upload = st.sidebar.file_uploader(label="2. Upload Your Old URLs", type=["csv"], help="CSV file with \";\" separator")
@@ -72,41 +139,65 @@ if new_urls_upload:
     st.dataframe(new_file[:10].style.highlight_null(null_color='#E7E7E7'))
 
 
+    @st.cache(allow_output_mutation=True)
+    def load_linguistic_model(name="sentence-transformers/distiluse-base-multilingual-cased-v2"):
+        """Instantiate a sentence-level DistilBERT model."""
+        return SentenceTransformer(name)
+
 
 
 ### DISPLAY RESULT ###
 
-if new_urls_upload and old_urls_upload:
-    match_button = st.button('Match!')
-    if match_button:
-        st.header('Result :')
+    if new_urls_upload and old_urls_upload:
+        match_button = st.button('Match!')
+        if match_button:
+            st.header('Result :')
 
-        with st.spinner('Wait, magic happens ...'):
-            stqdm.pandas()
+            if algorithm_selectbox == "Strings similarity":
+                alg_strings_similarity()
 
-            old_file['New Url'] = old_file[select_old_column].progress_map(lambda x: best_strings_similarity(x)[0])
-            old_file[['New Item', 'Similarity Score']] = pd.DataFrame(old_file['New Url'].tolist(), index=old_file.index)
-            redirects_plan = old_file[[select_old_column, 'New Item', 'Similarity Score']]
+            if algorithm_selectbox == "Semantic matching":
+                #load_model_button = st.button("Load the linguistic model")
+                #if load_model_button:
+                model = load_linguistic_model()
+                st.write("The linguistic model is successfully loaded!")
 
-            st.success('All items have been successfully matched!')
+                stqdm.pandas()
+                old_file['New Url'] = old_file[select_old_column].progress_map(lambda y: bert(y, model))
+                redirects_plan = old_file[['Url', 'New Url']][:50]
 
-            by_simscore = redirects_plan.groupby("Similarity Score").count()
-            st.bar_chart(by_simscore)
+                st.write(redirects_plan)
 
-            st.dataframe(redirects_plan.style.background_gradient(cmap='flare', subset=['Similarity Score']))
+                @st.cache
+                def convert_df(df):
+                    # IMPORTANT: Cache the conversion to prevent computation on every rerun
+                    return df.to_csv().encode('utf-8')
 
 
+                csv = convert_df(redirects_plan)
 
-        @st.cache
-        def convert_df(df):
-            # IMPORTANT: Cache the conversion to prevent computation on every rerun
-            return df.to_csv().encode('utf-8')
+                st.download_button(
+                    label="Download data as CSV",
+                    data=csv,
+                    file_name='redirects_plan.csv',
+                    mime='text/csv',
+                )
 
-        csv = convert_df(redirects_plan)
 
-        st.download_button(
-            label = "Download data as CSV",
-            data = csv,
-            file_name = 'redirects_plan.csv',
-            mime = 'text/csv',
-        )
+                #alg_semantic_best_match(x, model)
+                #stqdm.pandas()
+                #old_file['New Url'] = old_file['H1'].progress_map(lambda x: alg_semantic_best_match(x, model)[0])
+                #st.write(old_file)
+                #old_file[['New Item', 'Similarity Score']] = pd.DataFrame(old_file['New Url'].tolist(), index=old_file.index)
+                #redirects_plan = old_file[[select_old_column, 'New Item', 'Similarity Score']]
+
+                st.success('All items have been successfully matched!')
+
+                    #semantic_matching()
+            else:
+                st.write("This algorithm is not yet active.")
+
+    #if algorithm_selectbox == "Semantic matching":
+    #    st.write("Semantic matching selected!")
+
+
