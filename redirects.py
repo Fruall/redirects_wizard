@@ -67,7 +67,7 @@ def alg_strings_similarity():
 
 def bert(x, model):
     embeddings1 = model.encode(x, convert_to_tensor=True)
-    embeddings2 = model.encode(new_file['H1'], convert_to_tensor=True)
+    embeddings2 = model.encode(new_file[select_new_column], convert_to_tensor=True)
 
     cosine_scores = util.pytorch_cos_sim(embeddings1, embeddings2)
 
