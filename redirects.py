@@ -164,7 +164,7 @@ if new_urls_upload:
 
                 stqdm.pandas()
                 old_file['New Url'] = old_file[select_old_column].progress_map(lambda y: bert(y, model))
-                redirects_plan = old_file[['Url', 'New Url']][:50]
+                redirects_plan = old_file[['Url', 'New Url']]
 
                 st.write(redirects_plan)
 
