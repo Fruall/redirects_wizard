@@ -74,18 +74,22 @@ def bert(x, model):
     d = dict(enumerate(cosine_scores.flatten(), 1))
 
     #{el: 0 for el in new_file['Url']}
-    dictionary = dict(zip(new_file['Url'], d.values()))
+    dictionary = dict(zip(new_file.iloc[:, 0], d.values()))
 
     dict2 = {k: v for k, v in sorted(dictionary.items(), key=lambda item: item[1], reverse=True)}
     match_key = list(dict2.keys())[0]
+    match_values = list(dict2.values())[0]
+    result = f"{match_key}, {match_values}"
     # st.write(match_key)
-    return match_key
+    return result
+
+
 
 def alg_semantic_best_match(x, model):
     embeddings1 = model.encode(x, convert_to_tensor=True)
     embeddings2 = model.encode(new_file['H1'], convert_to_tensor=True)
 
-    # Compute cosine-similarits
+    # Compute cosine-similarities
     cosine_scores = util.pytorch_cos_sim(embeddings1, embeddings2)
 
     d = dict(enumerate(cosine_scores.flatten(), 1))
@@ -95,10 +99,10 @@ def alg_semantic_best_match(x, model):
 
     dict2 = {k: v for k, v in sorted(dictionary.items(), key=lambda item: item[1], reverse=True)}
     match_key = list(dict2.keys())[0]
-    # match_value = list(dict2.values())[0]
-    # match2 = list(dict2.values())[0]
+    #match_value = list(dict2.values())[0]
+    match2 = list(dict2.values())[1]
 
-    return match_key
+    return match_key, match2
 
 
 
@@ -109,7 +113,7 @@ st.sidebar.header("Setup")
 
 algorithm_selectbox = st.sidebar.radio(
     "1. Select the matching algorithm",
-    ("Strings similarity", "Semantic matching", "BOW (inactive)")
+    ("Strings similarity", "Semantic matching", "BOW (inactive)"), key="1"
 )
 
 old_urls_upload = st.sidebar.file_uploader(label="2. Upload Your Old URLs", type=["csv"], help="CSV file with \";\" separator")
@@ -117,10 +121,10 @@ old_urls_upload = st.sidebar.file_uploader(label="2. Upload Your Old URLs", type
 if old_urls_upload:
     old_file = pd.read_csv(old_urls_upload, encoding='utf-8', sep=";")
     old_file_colnames = old_file.columns.tolist()
-    select_old_column = st.sidebar.radio("Which columns to match?", old_file_colnames)
+    select_old_column = st.sidebar.radio("Which columns to match?", old_file_colnames, key="2")
     checkbox_whole_old_url = st.sidebar.checkbox("Use the whole URL to matching", help = "By default, we will match the last URL elements.")
     st.write(len(old_file), " old urls successfully added")
-    st.dataframe(old_file[:10].style.highlight_null(null_color='#E7E7E7'))
+    st.table(old_file[:10].style.highlight_null(null_color='#E7E7E7'))
 else:
     old_file = "old_file_no_added"
 
@@ -129,14 +133,14 @@ new_urls_upload = st.sidebar.file_uploader(label="3. Upload Your New URLs", type
 if new_urls_upload:
     new_file = pd.read_csv(new_urls_upload, encoding='utf-8', sep=";")
     new_file_colnames = new_file.columns.tolist()
-    select_new_column = st.sidebar.radio("Which columns to match?", new_file_colnames)
+    select_new_column = st.sidebar.radio("Which columns to match?", new_file_colnames, key="3")
     if checkbox_whole_old_url:
         checkbox_whole_new_url = st.sidebar.checkbox("Use the whole URL", help = "By default, we will match the last URL elements.", value=True)
     else:
         checkbox_whole_new_url = st.sidebar.checkbox("Use the whole URL", help = "By default, we will match the last URL elements.", value=False)
 
     st.write(len(new_file), " new urls successfully added")
-    st.dataframe(new_file[:10].style.highlight_null(null_color='#E7E7E7'))
+    st.table(new_file[:10].style.highlight_null(null_color='#E7E7E7'))
 
 
     @st.cache(allow_output_mutation=True)
@@ -160,13 +164,17 @@ if new_urls_upload:
                 #load_model_button = st.button("Load the linguistic model")
                 #if load_model_button:
                 model = load_linguistic_model()
-                st.write("The linguistic model is successfully loaded!")
+                st.success('The linguistic model is successfully loaded!')
 
                 stqdm.pandas()
-                old_file['New Url'] = old_file[select_old_column].progress_map(lambda y: bert(y, model))
-                redirects_plan = old_file[['Url', 'New Url']][:20]
+                old_file['New Temp Url'] = old_file[select_old_column].progress_map(lambda y: bert(y, model))
+                old_file['New Url'] = old_file['New Temp Url'].apply(lambda x: x.split(',')[0])
+                old_file['Similarity Score'] = old_file['New Temp Url'].apply(lambda x: x.split(',')[1]).astype('float').round(3)
 
-                st.write(redirects_plan)
+                st.success('All items have been successfully matched!')
+                redirects_plan = old_file[['Url', 'New Url', 'Similarity Score']][:50]
+
+                st.table(redirects_plan.style.background_gradient(cmap='flare', subset=['Similarity Score']))
 
                 @st.cache
                 def convert_df(df):
@@ -183,21 +191,5 @@ if new_urls_upload:
                     mime='text/csv',
                 )
 
-
-                #alg_semantic_best_match(x, model)
-                #stqdm.pandas()
-                #old_file['New Url'] = old_file['H1'].progress_map(lambda x: alg_semantic_best_match(x, model)[0])
-                #st.write(old_file)
-                #old_file[['New Item', 'Similarity Score']] = pd.DataFrame(old_file['New Url'].tolist(), index=old_file.index)
-                #redirects_plan = old_file[[select_old_column, 'New Item', 'Similarity Score']]
-
-                st.success('All items have been successfully matched!')
-
-                    #semantic_matching()
             else:
                 st.write("This algorithm is not yet active.")
-
-    #if algorithm_selectbox == "Semantic matching":
-    #    st.write("Semantic matching selected!")
-
-
