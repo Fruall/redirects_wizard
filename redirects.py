@@ -174,7 +174,7 @@ if new_urls_upload:
                 st.success('All items have been successfully matched!')
                 redirects_plan = old_file[['Url', 'New Url', 'Similarity Score']][:50]
 
-                st.table(redirects_plan.style.background_gradient(cmap='flare', subset=['Similarity Score']))
+                st.dataframe(redirects_plan.style.background_gradient(cmap='flare', subset=['Similarity Score']))
 
                 @st.cache
                 def convert_df(df):
