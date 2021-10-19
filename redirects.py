@@ -7,6 +7,7 @@ pd.set_option('display.max_colwidth', None)
 import seaborn as sns
 cm = sns.light_palette("red", as_cmap=True)
 st.set_page_config(layout="wide")
+pd.options.display.float_format = '{:.2%}'.format
 from fuzzywuzzy import fuzz
 from fuzzywuzzy import process
 from stqdm import stqdm
