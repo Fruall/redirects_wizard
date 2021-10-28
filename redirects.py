@@ -173,9 +173,9 @@ if new_urls_upload:
                 old_file['Similarity Score'] = old_file['New Temp Url'].apply(lambda x: x.split(',')[1]).astype('float').round(3)
 
                 st.success('All items have been successfully matched!')
-                redirects_plan = old_file[['Url', 'New Url', 'Similarity Score']][:50]
+                redirects_plan = old_file[['Url', 'New Url', 'Similarity Score']]
 
-                st.table(redirects_plan.style.background_gradient(cmap='flare', subset=['Similarity Score']))
+                st.table(redirects_plan[:50].style.background_gradient(cmap='flare', subset=['Similarity Score']))
 
                 @st.cache
                 def convert_df(df):
