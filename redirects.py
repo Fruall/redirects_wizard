@@ -51,7 +51,7 @@ def alg_strings_similarity():
 
         st.dataframe(redirects_plan.style.background_gradient(cmap='flare', subset=['Similarity Score']))
 
-    @st.cache
+    @st.cache_data
     def convert_df(df):
         # IMPORTANT: Cache the conversion to prevent computation on every rerun
         return df.to_csv().encode('utf-8')
@@ -117,10 +117,11 @@ algorithm_selectbox = st.sidebar.radio(
     ("Strings similarity", "Semantic matching", "BOW (inactive)"), key="1"
 )
 
-old_urls_upload = st.sidebar.file_uploader(label="2. Upload Your Old URLs", type=["csv"], help="CSV file with \";\" separator")
+old_urls_upload = st.sidebar.file_uploader(
+    "Chargez votre fichier au format excel', type='xlsx'")
 
 if old_urls_upload:
-    old_file = pd.read_csv(old_urls_upload, encoding='utf-8', sep=";")
+    old_file = pd.read_excel(old_urls_upload)
     old_file_colnames = old_file.columns.tolist()
     select_old_column = st.sidebar.radio("Which columns to match?", old_file_colnames, key="2")
     checkbox_whole_old_url = st.sidebar.checkbox("Use the whole URL to matching", help = "By default, we will match the last URL elements.")
@@ -129,10 +130,11 @@ if old_urls_upload:
 else:
     old_file = "old_file_no_added"
 
-new_urls_upload = st.sidebar.file_uploader(label="3. Upload Your New URLs", type=["csv"], help="CSV file with \";\" separator")
+new_urls_upload = st.sidebar.file_uploader(
+    "Chargez votre fichier au format excel.', type='xlsx'")
 
 if new_urls_upload:
-    new_file = pd.read_csv(new_urls_upload, encoding='utf-8', sep=";")
+    new_file = pd.read_excel(new_urls_upload)
     new_file_colnames = new_file.columns.tolist()
     select_new_column = st.sidebar.radio("Which columns to match?", new_file_colnames, key="3")
     if checkbox_whole_old_url:
@@ -144,7 +146,7 @@ if new_urls_upload:
     st.table(new_file[:10].style.highlight_null(null_color='#E7E7E7'))
 
 
-    @st.cache(allow_output_mutation=True)
+    @st.cache_resource
     def load_linguistic_model(name="sentence-transformers/distiluse-base-multilingual-cased-v2"):
         """Instantiate a sentence-level DistilBERT model."""
         return SentenceTransformer(name)
@@ -164,7 +166,9 @@ if new_urls_upload:
             if algorithm_selectbox == "Semantic matching":
                 #load_model_button = st.button("Load the linguistic model")
                 #if load_model_button:
+
                 model = load_linguistic_model()
+
                 st.success('The linguistic model is successfully loaded!')
 
                 stqdm.pandas()
@@ -177,7 +181,7 @@ if new_urls_upload:
 
                 st.table(redirects_plan[:50].style.background_gradient(cmap='flare', subset=['Similarity Score']))
 
-                @st.cache
+                @st.cache_data
                 def convert_df(df):
                     # IMPORTANT: Cache the conversion to prevent computation on every rerun
                     return df.to_csv().encode('utf-8')
