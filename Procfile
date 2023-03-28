@@ -1,1 +1,1 @@
-web: sh setup.sh && streamlit run cluster.py
+web: sh setup.sh && streamlit run redirects.py
