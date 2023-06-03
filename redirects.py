@@ -261,7 +261,9 @@ if new_urls_upload:
                 old_file[['Closest Page', 'Similarity']] = old_file.apply(lambda row: search_similar_pages(row, new_file),
                                                                           axis=1)
 
-                st.dataframe(old_file[['Url', 'Closest Page', 'Similarity']].style.background_gradient(cmap='flare', subset=['Similarity']))
+                st.dataframe(old_file[['Url', 'Closest Page', 'Similarity']]
+                             .style.background_gradient(cmap='flare',
+                                                        subset=['Similarity']), use_container_width=True)
 
 
 
