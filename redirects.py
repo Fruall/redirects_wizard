@@ -9,6 +9,7 @@ cm = sns.light_palette("red", as_cmap=True)
 st.set_page_config(layout="wide")
 pd.options.display.float_format = '{:.2%}'.format
 from stqdm import stqdm
+import os
 
 # STRINGS LIBRARIES
 from fuzzywuzzy import fuzz
@@ -224,8 +225,8 @@ if new_urls_upload:
             if algorithm_selectbox == "Semantic matching (GPT)":
                 st.success('Semantic matching (GPT)')
 
-                openai.api_key = "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"
-
+                os.environ['OPENAI_API_KEY'] = st.secrets['openai.api_key']
+                
                 stqdm.pandas()
                 old_file['Embedding'] = old_file[select_old_column].progress_map(create_embedding)
 
