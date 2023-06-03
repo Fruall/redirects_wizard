@@ -8,11 +8,21 @@ import seaborn as sns
 cm = sns.light_palette("red", as_cmap=True)
 st.set_page_config(layout="wide")
 pd.options.display.float_format = '{:.2%}'.format
+from stqdm import stqdm
+
+# STRINGS LIBRARIES
 from fuzzywuzzy import fuzz
 from fuzzywuzzy import process
-from stqdm import stqdm
+
+# TRANSFORMERS LIBRARIES
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer, util
+
+# OPENAI LIBRARIES
+import openai
+from openai.embeddings_utils import get_embedding, cosine_similarity
+
+password = '0987'
 
 def url_preprocessing(url):
     url.split("/")[-1]
@@ -88,7 +98,7 @@ def bert(x, model):
 
 def alg_semantic_best_match(x, model):
     embeddings1 = model.encode(x, convert_to_tensor=True)
-    embeddings2 = model.encode(new_file['H1'], convert_to_tensor=True)
+    embeddings2 = model.encode(new_file[select_new_column], convert_to_tensor=True)
 
     # Compute cosine-similarities
     cosine_scores = util.pytorch_cos_sim(embeddings1, embeddings2)
@@ -112,9 +122,11 @@ st.title("Redirects Wizard")
 
 st.sidebar.header("Setup")
 
+password_input = st.sidebar.text_input("Enter a password :", type="password")
+
 algorithm_selectbox = st.sidebar.radio(
     "1. Select the matching algorithm",
-    ("Strings similarity", "Semantic matching", "BOW (inactive)"), key="1"
+    ("Strings similarity", "Semantic matching (BERT)", "Semantic matching (GPT)", "BOW (inactive)"), key="1"
 )
 
 old_urls_upload = st.sidebar.file_uploader(
@@ -126,7 +138,9 @@ if old_urls_upload:
     select_old_column = st.sidebar.radio("Which columns to match?", old_file_colnames, key="2")
     checkbox_whole_old_url = st.sidebar.checkbox("Use the whole URL to matching", help = "By default, we will match the last URL elements.")
     st.write(len(old_file), " old urls successfully added")
-    st.table(old_file[:10].style.highlight_null(null_color='#E7E7E7'))
+
+    with st.expander("Your source URLs", expanded=False):
+        st.dataframe(old_file[:10].style.highlight_null(null_color='#E7E7E7'))
 else:
     old_file = "old_file_no_added"
 
@@ -143,19 +157,30 @@ if new_urls_upload:
         checkbox_whole_new_url = st.sidebar.checkbox("Use the whole URL", help = "By default, we will match the last URL elements.", value=False)
 
     st.write(len(new_file), " new urls successfully added")
-    st.table(new_file[:10].style.highlight_null(null_color='#E7E7E7'))
+
+    with st.expander("Your source URLs", expanded=False):
+        st.dataframe(new_file[:10].style.highlight_null(null_color='#E7E7E7'))
 
 
     @st.cache_resource
     def load_linguistic_model(name="sentence-transformers/distiluse-base-multilingual-cased-v2"):
+    #def load_linguistic_model(name="sentence-transformers/all-MiniLM-L6-v2"):
         """Instantiate a sentence-level DistilBERT model."""
         return SentenceTransformer(name)
 
 
+    def create_embedding(text):
+        response = openai.Embedding.create(
+            input=text,
+            model="text-embedding-ada-002"
+        )
+        embeddings = response['data'][0]['embedding']
+        return embeddings
+
 
 ### DISPLAY RESULT ###
 
-    if new_urls_upload and old_urls_upload:
+    if new_urls_upload and old_urls_upload and password_input == '0987':
         match_button = st.button('Match!')
         if match_button:
             st.header('Result :')
@@ -163,7 +188,7 @@ if new_urls_upload:
             if algorithm_selectbox == "Strings similarity":
                 alg_strings_similarity()
 
-            if algorithm_selectbox == "Semantic matching":
+            if algorithm_selectbox == "Semantic matching (BERT)":
                 #load_model_button = st.button("Load the linguistic model")
                 #if load_model_button:
 
@@ -195,6 +220,50 @@ if new_urls_upload:
                     file_name='redirects_plan.csv',
                     mime='text/csv',
                 )
+
+            if algorithm_selectbox == "Semantic matching (GPT)":
+                st.success('Semantic matching (GPT)')
+
+                openai.api_key = "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"
+
+                stqdm.pandas()
+                old_file['Embedding'] = old_file[select_old_column].progress_map(create_embedding)
+
+                with st.expander("Embeddings pour le fichier source", expanded=False):
+                    st.dataframe(old_file[:10])
+
+                stqdm.pandas()
+                new_file['Embedding'] = new_file[select_new_column].progress_map(create_embedding)
+
+                with st.expander("Embeddings pour le fichier de destination", expanded=False):
+                    st.dataframe(new_file[:10])
+
+
+                def search_similar_pages(row, new_file):
+                    # get the embedding of the current page in old_file
+                    old_embedding = row['Embedding']
+
+                    # compute the cosine similarity with all embeddings in new_file
+                    new_file["similarity"] = new_file['Embedding'].apply(lambda x: cosine_similarity(x, old_embedding))
+
+                    # find the row in new_file with maximum similarity
+                    closest_match_row = new_file.loc[new_file['similarity'].idxmax()]
+
+                    # extract closest page and its similarity
+                    closest_page = closest_match_row['Url']
+                    max_similarity = closest_match_row['similarity']
+
+                    return pd.Series([closest_page, max_similarity])
+
+
+                # Apply function to each row of old_file
+                old_file[['Closest Page', 'Similarity']] = old_file.apply(lambda row: search_similar_pages(row, new_file),
+                                                                          axis=1)
+
+                st.dataframe(old_file[['Url', 'Closest Page', 'Similarity']].style.background_gradient(cmap='flare', subset=['Similarity']))
+
+
+
 
             else:
                 st.write("This algorithm is not yet active.")
