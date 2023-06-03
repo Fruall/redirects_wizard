@@ -225,7 +225,7 @@ if new_urls_upload:
             if algorithm_selectbox == "Semantic matching (GPT)":
                 st.success('Semantic matching (GPT)')
 
-                os.environ['openai.api_key'] = st.secrets['openai.api_key']
+                os.environ['OPENAI_API_KEY'] = st.secrets['OPENAI_API_KEY']
                 
                 stqdm.pandas()
                 old_file['Embedding'] = old_file[select_old_column].progress_map(create_embedding)
