@@ -141,7 +141,8 @@ if old_urls_upload:
     st.write(len(old_file), " old urls successfully added")
 
     with st.expander("Your source URLs", expanded=False):
-        st.dataframe(old_file[:10].style.highlight_null(null_color='#E7E7E7'))
+        #st.dataframe(old_file[:10].style.highlight_null(null_color='#E7E7E7'))
+        st.dataframe(old_file[:10])
 else:
     old_file = "old_file_no_added"
 
