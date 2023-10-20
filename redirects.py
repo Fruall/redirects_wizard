@@ -267,7 +267,19 @@ if new_urls_upload:
                              .style.background_gradient(cmap='flare',
                                                         subset=['Similarity']), use_container_width=True)
 
-
+                @st.cache_data
+                def convert_df(df):
+                    # IMPORTANT: Cache the conversion to prevent computation on every rerun
+                    return df.to_csv().encode('utf-8')
+            
+                csv = convert_df(redirects_plan)
+            
+                st.download_button(
+                    label="Download data as CSV",
+                    data=csv,
+                    file_name='redirects_plan.csv',
+                    mime='text/csv',
+                )
 
 
             else:
