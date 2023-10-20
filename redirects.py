@@ -29,7 +29,7 @@ def url_preprocessing(url):
     url.split("/")[-1]
 
 def best_strings_similarity(x):
-    urls = ['url', 'Url', 'URL', 'page', 'Page', 'PAGE']
+    urls = ['url', 'Url', 'URL', 'page', 'Page', 'PAGE', 'Adresse']
 
     choices = new_file[select_new_column].tolist()
 
@@ -161,7 +161,8 @@ if new_urls_upload:
     st.write(len(new_file), " new urls successfully added")
 
     with st.expander("Your source URLs", expanded=False):
-        st.dataframe(new_file[:10].style.highlight_null(null_color='#E7E7E7'))
+        #st.dataframe(new_file[:10].style.highlight_null(null_color='#E7E7E7'))
+        st.dataframe(new_file[:10])
 
 
     @st.cache_resource
