@@ -87,4 +87,5 @@ validators
 watchdog
 Werkzeug
 yarl
+xlrd
 zipp
