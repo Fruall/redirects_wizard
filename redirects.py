@@ -62,7 +62,7 @@ def alg_strings_similarity():
 
         st.dataframe(redirects_plan.style.background_gradient(cmap='flare', subset=['Similarity Score']))
 
-    @st.cache_data
+    #@st.cache_data
     def convert_df(df):
         # IMPORTANT: Cache the conversion to prevent computation on every rerun
         return df.to_csv().encode('utf-8')
@@ -165,7 +165,7 @@ if new_urls_upload:
         st.dataframe(new_file[:10])
 
 
-    @st.cache_resource
+    #@st.cache_resource
     def load_linguistic_model(name="sentence-transformers/distiluse-base-multilingual-cased-v2"):
     #def load_linguistic_model(name="sentence-transformers/all-MiniLM-L6-v2"):
         """Instantiate a sentence-level DistilBERT model."""
@@ -209,7 +209,7 @@ if new_urls_upload:
 
                 st.table(redirects_plan[:50].style.background_gradient(cmap='flare', subset=['Similarity Score']))
 
-                @st.cache_data
+                #@st.cache_data
                 def convert_df(df):
                     # IMPORTANT: Cache the conversion to prevent computation on every rerun
                     return df.to_csv().encode('utf-8')
@@ -267,7 +267,7 @@ if new_urls_upload:
                              .style.background_gradient(cmap='flare',
                                                         subset=['Similarity']), use_container_width=True)
 
-                @st.cache_data
+                #@st.cache_data
                 def convert_df(df):
                     # IMPORTANT: Cache the conversion to prevent computation on every rerun
                     return df.to_csv().encode('utf-8')
